@@ -1,19 +1,37 @@
+use regex::Regex;
 use std::fs;
 
 fn main() {
     let contents = fs::read_to_string("./input.txt").expect("Unable to read input file");
-    let sum = contents
-        .split("mul(")
-        .filter_map(|og| {
-            let (lhs, remainder) = og.split_once(',').unwrap_or(("", ""));
-            let (rhs, _) = remainder.split_once(')').unwrap_or(("", ""));
-            let lhs = lhs.parse::<u32>();
-            let rhs = rhs.parse::<u32>();
-            match (lhs, rhs) {
-                (Ok(x), Ok(y)) => Some(x * y),
+    let mut enable = true;
+    let sum: u32 = Regex::find_iter(
+        &Regex::new(r"(do\(\)|don't\(\)|mul\((\d{1,3}),(\d{1,3})\))")
+            .expect("Unable to parse regex"),
+        contents.as_str(),
+    )
+    .map(|m| match m.as_str() {
+        r"do()" => {
+            enable = true;
+            0
+        }
+        r"don't()" => {
+            enable = false;
+            0
+        }
+        _ if !enable => 0,
+        mul => Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)")
+            .expect("Unable to parse regex")
+            .captures(mul)
+            .unwrap()
+            .iter()
+            .skip(1)
+            .filter_map(|it| match it {
+                Some(num) => Some(num.as_str().parse::<u32>().unwrap()),
                 _ => None,
-            }
-        })
-        .sum::<u32>();
-    print!("{:#?}", sum);
+            })
+            .reduce(|acc, it| acc * it)
+            .unwrap_or(0),
+    })
+    .sum();
+    println!("{:#?}", sum);
 }

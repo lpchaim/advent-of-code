@@ -6,7 +6,4 @@
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;
-
-  # https://devenv.sh/pre-commit-hooks/
-  pre-commit.hooks.rustfmt.enable = true;
 }
