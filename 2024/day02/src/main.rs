@@ -18,31 +18,59 @@ fn parse() -> Vec<Vec<i32>> {
 }
 
 fn part1() {
-    solve(0)
+    solve(false)
 }
 
 fn part2() {
-    solve(1)
+    solve(true)
 }
 
-fn solve(_bad_parts: u8) {
+fn solve(permissive: bool) {
     let n_safe = parse()
         .into_iter()
-        .filter_map(|line| line_is_valid(&line).then_some(line))
+        .filter_map(|line| {
+            let mostly_ascending = line
+                .windows(2)
+                .filter(|arr| (arr[1] - arr[0]).is_positive())
+                .count()
+                >= (line.len() / 2);
+            let valid_indices = get_valid_indices(&line, mostly_ascending);
+            let mut invalid_indices = valid_indices
+                .iter()
+                .enumerate()
+                .filter_map(|(i, valid)| (!*valid).then_some(i));
+            let n_invalid = invalid_indices.clone().count();
+            match n_invalid {
+                0 => Some(line),
+                _ if permissive => invalid_indices
+                    .find(|index| {
+                        let mut line = line.clone();
+                        line.remove(*index);
+                        get_valid_indices(&line, mostly_ascending)
+                            .iter()
+                            .all(|valid| *valid)
+                    })
+                    .and(Some(line))
+                    .or(None),
+                _ => None
+            }
+        })
         .count();
     println!("{:#?}", n_safe);
 }
 
-fn line_is_valid(line: &[i32]) -> bool {
-    let first_diff = line.get(1).unwrap() - line.get(0).unwrap();
-    line.iter().enumerate().skip(1).all(|(i, curr)| {
+fn get_valid_indices(line: &[i32], ascending: bool) -> Vec<bool> {
+    let mut valid = vec![true; line.len()];
+    line.iter().enumerate().skip(1).for_each(|(i, curr)| {
         let prev = line[i - 1];
         let diff = curr - prev;
-        diff.abs() >= 1
+        let is_valid = diff.abs() >= 1
             && diff.abs() <= 3
-            && match first_diff {
-                _ if first_diff > 0 => diff.is_positive(),
-                _ => diff.is_negative(),
-            }
-    })
+            && ((ascending && diff.is_positive()) || (!ascending && diff.is_negative()));
+        if !is_valid {
+            valid[i - 1] = false;
+            valid[i] = false;
+        }
+    });
+    valid
 }
